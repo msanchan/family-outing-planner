@@ -9,16 +9,12 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 app.post('/api/generate-plan', async (req, res) => {
   const { facility, transport, date, startTime } = req.body;
 
-  if (!facility) {
-    return res.status(400).json({ error: '施設名を入力してください' });
-  }
+  if (!facility) return res.status(400).json({ error: '施設名を入力してください' });
 
   const transportText = transport === 'car' ? '車' : '公共交通機関（電車・バス）';
   const dateText = date || '今日';
@@ -52,7 +48,7 @@ ${startTimeText}（自宅出発）
 4. 8歳の男の子が楽しめる要素を必ず含めること
 5. 各スポット間の移動時間も考慮すること
 
-以下のJSON形式で回答してください（JSON以外のテキストは出力しないこと）：
+以下のJSON形式で回答してください（JSON以外のテキストは一切出力しないこと）：
 
 {
   "title": "プランタイトル（魅力的な名前）",
@@ -61,78 +57,42 @@ ${startTimeText}（自宅出発）
   "totalDistance": "総移動距離の目安（例：約50km）",
   "schedule": [
     {
-      "time": "10:00",
+      "time": "09:00",
       "type": "departure",
       "name": "自宅出発",
       "description": "お出かけスタート！",
       "duration": "移動中",
-      "icon": "🚗",
+      "icon": "🏠",
       "tips": ""
-    },
-    {
-      "time": "時刻",
-      "type": "spot | cafe | meal | transit",
-      "name": "スポット名",
-      "description": "このスポットの説明（なぜここがおすすめか、何が楽しめるか）",
-      "duration": "滞在時間（例：約2時間）",
-      "icon": "絵文字",
-      "tips": "お役立ちTips（駐車場情報・混雑時間・料金目安など）"
     }
   ],
   "totalCost": "家族3人の概算費用",
-  "notes": ["注意点や持ち物リストなど（3〜5項目）"]
+  "notes": ["注意点や持ち物リスト（3〜5項目）"]
 }
 
-typeの値：
-- departure: 出発
-- spot: 観光・遊び場スポット
-- cafe: カフェ・休憩スポット
-- meal: 食事
-- transit: 移動
-- arrival: 帰宅
-
-iconの選び方：
-- 公園・自然系 → 🌳
-- ゲーム・アトラクション → 🎮
-- 水族館・動物園 → 🐠
-- 博物館・科学館 → 🔬
-- カフェ・スイーツ → ☕
-- 食事（夕食） → 🍽️
-- 移動（車） → 🚗
-- 移動（電車） → 🚆
-- ショッピング → 🛍️
-- 出発・帰宅 → 🏠
-
-スケジュールは最低6〜9個のアイテムを含めること。帰宅のアイテムも必ず追加すること。`;
+typeの値: departure / spot / cafe / meal / transit / arrival
+スケジュールは最低7個以上、帰宅アイテムも必ず含めること。`;
 
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
-      system: 'あなたは日本の家族向けお出かけプランの専門家です。必ず有効なJSONのみを返してください。',
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      system: 'あなたは日本の家族向けお出かけプランの専門家です。必ず有効なJSONのみを返してください。余分なテキストや説明は一切不要です。',
+      messages: [{ role: 'user', content: prompt }],
     });
 
-    const responseText = message.content[0].text.trim();
+    const text = message.content[0].text.trim();
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('JSONの解析に失敗しました');
 
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('JSONの解析に失敗しました');
-    }
-
-    const plan = JSON.parse(jsonMatch[0]);
+    const plan = JSON.parse(match[0]);
     res.json({ success: true, plan });
-  } catch (error) {
-    console.error('Error generating plan:', error);
-    if (error instanceof SyntaxError) {
+  } catch (err) {
+    console.error(err);
+    if (err instanceof SyntaxError) {
       res.status(500).json({ error: 'プランの生成中にエラーが発生しました。もう一度お試しください。' });
     } else {
-      res.status(500).json({ error: error.message || 'プランの生成に失敗しました' });
+      res.status(500).json({ error: err.message || 'プランの生成に失敗しました' });
     }
   }
 });

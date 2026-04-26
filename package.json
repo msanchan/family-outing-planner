@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "家族お出かけプランナー",
   "scripts": {
-    "start": "vercel dev",
-    "dev": "vercel dev",
+    "start": "node server.js",
     "deploy": "vercel --prod"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0"
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "vercel": "^39.0.0"
