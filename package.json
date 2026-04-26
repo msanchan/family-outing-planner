@@ -1,0 +1,16 @@
+{
+  "name": "family-outing-planner",
+  "version": "1.0.0",
+  "description": "家族お出かけプランナー",
+  "scripts": {
+    "start": "vercel dev",
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  },
+  "devDependencies": {
+    "vercel": "^39.0.0"
+  }
+}
